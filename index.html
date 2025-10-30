@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>El Corcel 🐎</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1c6a3a">
+  <style>
+    :root{
+      --bg:#1c6a3a;
+      --bg-dark:#14512d;
+      --fg:#ffffff;
+      --muted:rgba(255,255,255,0.7);
+      --button:#0b5ed7;
+    }
+    html,body{
+      height:100%;
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:radial-gradient(circle at top, var(--bg) 0%, #0f3520 60%, #082215 100%);
+    }
+    body{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:22px;
+      color:var(--fg);
+    }
+    .card{
+      width:100%;
+      max-width:520px;
+      text-align:center;
+      background:rgba(0,0,0,0.12);
+      backdrop-filter:blur(6px);
+      border:1px solid rgba(255,255,255,0.06);
+      border-radius:24px;
+      padding:26px 20px 20px;
+      box-shadow:0 16px 40px rgba(0,0,0,0.18);
+    }
+    .logo{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:8px;
+      margin-bottom:8px;
+    }
+    .logo-emoji{
+      font-size:28px;
+    }
+    .title{
+      font-size:20px;
+      font-weight:700;
+      letter-spacing:0.05em;
+      text-transform:uppercase;
+    }
+    .subtitle{
+      font-size:12px;
+      color:var(--muted);
+      margin-bottom:16px;
+      text-transform:uppercase;
+      letter-spacing:0.35em;
+    }
+    .clave{
+      font-size:72px;
+      font-weight:800;
+      letter-spacing:4px;
+      margin:16px 0 4px;
+    }
+    .muted{
+      color:var(--muted);
+      font-size:13px;
+    }
+    .row{
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      margin-top:14px;
+    }
+    button{
+      background:var(--button);
+      border:0;
+      padding:10px 14px;
+      border-radius:14px;
+      color:#fff;
+      font-weight:600;
+      cursor:pointer;
+      min-width:94px;
+    }
+    button:active{
+      transform:scale(.98);
+    }
+    .footer{
+      font-size:11px;
+      color:var(--muted);
+      margin-top:18px;
+    }
+
+    @media (max-width:480px){
+      .clave{font-size:56px;}
+      .title{font-size:18px;}
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <span class="logo-emoji">🐎</span>
+      <div>
+        <div class="title">El Corcel</div>
+        <div class="subtitle">farmacia veterinaria</div>
+      </div>
+    </div>
+
+    <div id="clave" class="clave">-----</div>
+    <div id="prox" class="muted">Próximo cambio: —</div>
+
+    <div class="row">
+      <button id="copiar">Copiar</button>
+      <button id="actualizar">Actualizar</button>
+    </div>
+
+    <div class="footer">
+      Añade a pantalla de inicio para usarla como app y sin conexión.
+    </div>
+  </div>
+
+  <script>
+    // Convertir JS: 0=Dom..6=Sab → Lun=1..Dom=7
+    const mapWeekday = d => d === 0 ? 7 : d;
+
+    // Fórmula:
+    // M = floor(m/5)
+    // A = M * D  → 3 dígitos
+    // B = (P * N) * ( (m % 5) + 2 )  → 2 dígitos
+    // CLAVE = A3 + B2
+    function calcularClave(date = new Date()) {
+      const minute = date.getMinutes();     // m
+      const second = date.getSeconds();
+      const day = date.getDate();           // D
+      const jsDay = date.getDay();          // 0..6
+
+      const M = Math.floor(minute / 5);     // 0..11
+      const D  = day;
+      const P  = (D % 2 === 0) ? 2 : 1;
+      const N  = mapWeekday(jsDay);
+
+      const A = M * D;                      // puede ser hasta 341
+      const A3 = String(A).padStart(3, '0');
+
+      const basePN = P * N;                 // 2..14
+      const minuteFactor = (minute % 5) + 2;  // 2..6
+      const B = basePN * minuteFactor;      // típico: 4*3=12, 8*6=48, etc.
+      const B2 = String(B).padStart(2, '0');
+
+      const clave = A3 + B2;
+
+      // tiempo hasta el próximo múltiplo de 5 min
+      const secsToNext5 =
+        ((5 - (minute % 5)) % 5) * 60 + (60 - second) % 60;
+
+      return { clave, secsToNext5 };
+    }
+
+    const $clave = document.getElementById('clave');
+    const $prox  = document.getElementById('prox');
+    const $copiar = document.getElementById('copiar');
+    const $act = document.getElementById('actualizar');
+
+    function actualizarUI() {
+      const { clave, secsToNext5 } = calcularClave(new Date());
+      $clave.textContent = clave;
+      const mm = String(Math.floor(secsToNext5 / 60)).padStart(2,'0');
+      const ss = String(secsToNext5 % 60).padStart(2,'0');
+      $prox.textContent = `Próximo cambio: ${mm}:${ss}`;
+    }
+
+    actualizarUI();
+    setInterval(actualizarUI, 1000);
+
+    $act.addEventListener('click', actualizarUI);
+    $copiar.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText($clave.textContent);
+        $copiar.textContent = 'Copiado ✅';
+        setTimeout(() => $copiar.textContent = 'Copiar', 1200);
+      } catch(e) {
+        $copiar.textContent = 'No se pudo copiar';
+      }
+    });
+
+    // Service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js');
+      });
+    }
+  </script>
+</body>
+</html>
