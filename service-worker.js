@@ -1,4 +1,4 @@
-const CACHE_NAME = 'elcorcel-v3'; // súbelo cuando cambies algo
+const CACHE_NAME = 'elcorcel-v4'; // súbelo cuando cambies algo
 const ASSETS = [
   './',
   './index.html',
@@ -32,3 +32,4 @@ self.addEventListener('fetch', (e) => {
     })
   );
 });
+
